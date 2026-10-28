@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Green Art — Podróż przez ogrody · Przemków</title>
+    <meta
+      name="description"
+      content="Interaktywna podróż 3D przez pięć ogrodów Green Art: projekty ogrodów, architektura krajobrazu, realizacje i florystyka. Przemków, Dolny Śląsk."
+    />
+    <meta name="theme-color" content="#1d2a20" />
+    <meta property="og:title" content="Green Art — Podróż przez ogrody" />
+    <meta property="og:description" content="Przewiń i przejdź przez pięć ogrodów: od porannej łąki do pergoli o zachodzie słońca." />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  </head>
+  <body>
+    <canvas id="gl" class="fixed inset-0 h-full w-full" aria-hidden="true"></canvas>
+    <div class="veil pointer-events-none fixed inset-0" aria-hidden="true"></div>
+    <div class="grain pointer-events-none fixed inset-0 z-[60]" aria-hidden="true"></div>
+    <div id="fade" class="pointer-events-none fixed inset-0 z-[55] bg-ink opacity-0 transition-opacity duration-300" aria-hidden="true"></div>
+
+    <!-- Ekran ładowania -->
+    <div id="loader" class="fixed inset-0 z-[80] grid place-items-center bg-forest text-linen transition-[opacity,visibility] duration-1000" role="status" aria-live="polite">
+      <div class="flex flex-col items-center gap-6">
+        <svg viewBox="0 0 200 200" class="h-28 w-28 animate-[spin_24s_linear_infinite]" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.2"><path d="M82.5 182.2A84 84 0 0 1 88.3 16.8"/><path d="M117.5 182.2A84 84 0 0 0 111.7 16.8"/></g><g fill="currentColor"><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(74.0 179.9) rotate(160)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(59.9 173.8) rotate(247)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(47.1 165.3) rotate(181)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(36.1 154.6) rotate(268)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(27.3 142.0) rotate(202)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(20.8 128.0) rotate(289)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(17.0 113.1) rotate(223)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(16.0 97.8) rotate(310)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(17.8 82.5) rotate(244)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(22.4 67.9) rotate(331)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(29.6 54.3) rotate(265)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(39.1 42.2) rotate(352)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(50.6 32.0) rotate(286)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(63.8 24.2) rotate(373)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(78.3 18.9) rotate(307)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(126.0 179.9) rotate(20)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(140.1 173.8) rotate(-67)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(152.9 165.3) rotate(-1)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(163.9 154.6) rotate(-88)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(172.7 142.0) rotate(-22)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(179.2 128.0) rotate(-109)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(183.0 113.1) rotate(-43)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(184.0 97.8) rotate(-130)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(182.2 82.5) rotate(-64)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(177.6 67.9) rotate(-151)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(170.4 54.3) rotate(-85)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(160.9 42.2) rotate(-172)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(149.4 32.0) rotate(-106)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(136.2 24.2) rotate(-193)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(121.7 18.9) rotate(-127)"/></g></svg>
+        <p class="font-serif text-2xl italic">Sadzimy ogród…</p>
+        <div class="h-px w-48 overflow-hidden bg-linen/15">
+          <div id="loader-bar" class="h-full w-0 bg-blush transition-[width] duration-500"></div>
+        </div>
+        <p id="loader-pct" class="eyebrow text-linen/60">0%</p>
+      </div>
+    </div>
+
+    <!-- Nawigacja -->
+    <header class="fixed inset-x-0 top-0 z-50 px-4 pt-4 sm:px-6">
+      <div class="glass mx-auto flex max-w-7xl items-center justify-between rounded-full py-2 pr-2 pl-3">
+        <a href="#brama" data-go="brama" class="flex items-center gap-3">
+          <svg viewBox="0 0 200 200" class="h-10 w-10" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.2"><path d="M82.5 182.2A84 84 0 0 1 88.3 16.8"/><path d="M117.5 182.2A84 84 0 0 0 111.7 16.8"/></g><g fill="currentColor"><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(74.0 179.9) rotate(160)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(59.9 173.8) rotate(247)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(47.1 165.3) rotate(181)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(36.1 154.6) rotate(268)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(27.3 142.0) rotate(202)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(20.8 128.0) rotate(289)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(17.0 113.1) rotate(223)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(16.0 97.8) rotate(310)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(17.8 82.5) rotate(244)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(22.4 67.9) rotate(331)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(29.6 54.3) rotate(265)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(39.1 42.2) rotate(352)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(50.6 32.0) rotate(286)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(63.8 24.2) rotate(373)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(78.3 18.9) rotate(307)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(126.0 179.9) rotate(20)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(140.1 173.8) rotate(-67)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(152.9 165.3) rotate(-1)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(163.9 154.6) rotate(-88)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(172.7 142.0) rotate(-22)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(179.2 128.0) rotate(-109)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(183.0 113.1) rotate(-43)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(184.0 97.8) rotate(-130)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(182.2 82.5) rotate(-64)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(177.6 67.9) rotate(-151)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(170.4 54.3) rotate(-85)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(160.9 42.2) rotate(-172)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(149.4 32.0) rotate(-106)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(136.2 24.2) rotate(-193)"/><path d="M0 0C4.2-3.6 9.6-3.6 14 0C9.6 3.6 4.2 3.6 0 0Z" transform="translate(121.7 18.9) rotate(-127)"/></g><text x="100" y="116" text-anchor="middle" fill="currentColor" font-family="'Fraunces Variable',serif" font-style="italic" font-size="52">GA</text></svg>
+          <span class="font-serif text-lg italic">Green Art</span>
+        </a>
+        <nav aria-label="Etapy podróży" class="hidden lg:block">
+          <ul class="flex gap-7 text-[13px] text-linen/80">
+            <li><a href="#laka" data-go="laka" class="transition-colors hover:text-linen">Projekt</a></li>
+            <li><a href="#parter" data-go="parter" class="transition-colors hover:text-linen">Architektura</a></li>
+            <li><a href="#staw" data-go="staw" class="transition-colors hover:text-linen">Realizacje</a></li>
+            <li><a href="#kwiaty" data-go="kwiaty" class="transition-colors hover:text-linen">Florystyka</a></li>
+            <li><a href="#pergola" data-go="pergola" class="transition-colors hover:text-linen">Opieka</a></li>
+          </ul>
+        </nav>
+        <a href="#kontakt" data-go="kontakt" class="btn !py-3 text-[11px]">Umów spacer</a>
+      </div>
+    </header>
+
+    <!-- Mapa podróży (boczny szlak) -->
+    <nav id="trail" aria-label="Mapa podróży" class="glass fixed top-1/2 right-5 z-40 hidden -translate-y-1/2 rounded-2xl py-5 pr-6 pl-5 md:block">
+      <ol class="relative flex flex-col gap-5 border-r border-linen/25 pr-4 text-right">
+        <li><a data-go="brama" href="#brama" class="trail-stop">Brama</a></li>
+        <li><a data-go="laka" href="#laka" class="trail-stop">Łąka</a></li>
+        <li><a data-go="parter" href="#parter" class="trail-stop">Parter</a></li>
+        <li><a data-go="staw" href="#staw" class="trail-stop">Staw</a></li>
+        <li><a data-go="kwiaty" href="#kwiaty" class="trail-stop">Kwiaty</a></li>
+        <li><a data-go="pergola" href="#pergola" class="trail-stop">Pergola</a></li>
+        <li><a data-go="kontakt" href="#kontakt" class="trail-stop">Polana</a></li>
+      </ol>
+    </nav>
+
+    <main id="journey" class="relative z-10">
+      <!-- 0. Brama -->
+      <section id="brama" data-z="30" data-name="Brama" class="relative flex min-h-[150svh] flex-col">
+        <div class="sticky top-0 flex h-[100svh] flex-col justify-end px-4 pb-24 sm:px-6 sm:pb-16">
+          <div class="mx-auto w-full max-w-7xl">
+            <p class="fade-up eyebrow mb-5 text-linen [text-shadow:0_1px_16px_rgb(0_0_0/0.55)]" style="animation-delay: 0.3s">Green Art · Ogrody &amp; Florystyka · Przemków</p>
+            <h1 class="display text-[clamp(3.4rem,min(13vw,17svh),11rem)] text-linen [text-shadow:0_2px_40px_rgb(0_0_0/0.25)]">
+              <span class="block overflow-hidden pb-[0.06em]"><span class="rise inline-block" style="animation-delay: 0.1s">Podróż</span></span>
+              <span class="block overflow-hidden pb-[0.06em]"><span class="rise inline-block" style="animation-delay: 0.2s">przez <em class="text-blush">ogrody.</em></span></span>
+            </h1>
+            <div class="mt-8 flex flex-wrap items-end justify-between gap-6">
+              <p class="fade-up max-w-md text-[15px] leading-relaxed text-linen [text-shadow:0_1px_16px_rgb(0_0_0/0.55)]" style="animation-delay: 0.5s">
+                Pięć ogrodów, jedna ścieżka. Przewijaj, by przejść od porannej łąki do pergoli o zachodzie słońca — tak, jak prowadzimy każdy projekt: od pierwszej kreski do ostatniego kwiatu.
+              </p>
+              <button type="button" data-go="laka" class="fade-up group flex items-center gap-4 text-linen" style="animation-delay: 0.7s">
+                <span class="relative block h-14 w-px overflow-hidden bg-linen/30"><span class="absolute inset-0 bg-linen [animation:cue_2.2s_cubic-bezier(.65,0,.35,1)_infinite]"></span></span>
+                <span class="eyebrow">Wyrusz w drogę</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- I. Łąka -->
+      <section id="laka" data-z="-150" data-name="Łąka" class="chapter relative min-h-[170svh] px-4 sm:px-6" aria-labelledby="t-laka">
+        <div class="sticky top-[18svh] mx-auto max-w-7xl">
+          <article class="card glass max-w-md rounded-[28px] p-7 sm:p-9">
+            <p class="eyebrow mb-4 text-sage"><em class="font-serif text-base tracking-normal text-blush normal-case">I.</em> Łąka · Rozmowa i projekt</p>
+            <h2 id="t-laka" class="display text-[clamp(2.2rem,5vw,3.6rem)]">Każdy ogród zaczyna się od <em class="text-blush">spaceru.</em></h2>
+            <p class="mt-5 text-[15px] leading-relaxed text-linen/80">
+              Przychodzimy, słuchamy, patrzymy, skąd wstaje słońce. Z tych notatek powstaje koncepcja i realistyczna wizualizacja 3D — zobaczysz swój ogród, zanim posadzimy pierwszą roślinę.
+            </p>
+            <ul class="mt-6 flex flex-wrap gap-2"><li class="chip">Projekt koncepcyjny</li><li class="chip">Wizualizacje 3D</li><li class="chip">Dobór roślin</li></ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- II. Parter -->
+      <section id="parter" data-z="-380" data-name="Parter" class="chapter relative min-h-[170svh] px-4 sm:px-6" aria-labelledby="t-parter">
+        <div class="sticky top-[18svh] mx-auto flex max-w-7xl justify-end">
+          <article class="card glass max-w-md rounded-[28px] p-7 sm:p-9">
+            <p class="eyebrow mb-4 text-sage"><em class="font-serif text-base tracking-normal text-blush normal-case">II.</em> Parter · Architektura krajobrazu</p>
+            <h2 id="t-parter" class="display text-[clamp(2.2rem,5vw,3.6rem)]">Dobry projekt widać <em class="text-blush">z lotu ptaka.</em></h2>
+            <p class="mt-5 text-[15px] leading-relaxed text-linen/80">
+              Rytm, proporcje, osie widokowe. Projektujemy ogrody przydomowe, przestrzenie wspólne i tereny firm — z precyzyjnym projektem wykonawczym, który wykonawca czyta jak mapę.
+            </p>
+            <ul class="mt-6 flex flex-wrap gap-2"><li class="chip">Projekt wykonawczy</li><li class="chip">Tereny firm</li><li class="chip">Mała architektura</li></ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- III. Staw -->
+      <section id="staw" data-z="-600" data-name="Staw" class="chapter relative min-h-[170svh] px-4 sm:px-6" aria-labelledby="t-staw">
+        <div class="sticky top-[18svh] mx-auto max-w-7xl">
+          <article class="card glass max-w-md rounded-[28px] p-7 sm:p-9">
+            <p class="eyebrow mb-4 text-sage"><em class="font-serif text-base tracking-normal text-blush normal-case">III.</em> Staw · Realizacja</p>
+            <h2 id="t-staw" class="display text-[clamp(2.2rem,5vw,3.6rem)]">Kamień, woda <em class="text-blush">i cisza.</em></h2>
+            <p class="mt-5 text-[15px] leading-relaxed text-linen/80">
+              Budujemy od niwelacji terenu po ostatnią ściółkę: oczka wodne, nawadnianie, oświetlenie, nasadzenia. Jeden opiekun projektu od początku do końca.
+            </p>
+            <dl class="mt-7 grid grid-cols-3 gap-4 border-t border-linen/15 pt-5">
+              <div><dt class="sr-only">Lata doświadczenia</dt><dd><span class="display block text-4xl">15<span class="text-blush">+</span></span><span class="text-[12px] text-linen/65">lat doświadczenia</span></dd></div>
+              <div><dt class="sr-only">Ogrody</dt><dd><span class="display block text-4xl">240</span><span class="text-[12px] text-linen/65">ogrodów*</span></dd></div>
+              <div><dt class="sr-only">Wizualizacje</dt><dd><span class="display block text-4xl">3<span class="text-blush">D</span></span><span class="text-[12px] text-linen/65">każdy projekt</span></dd></div>
+            </dl>
+            <p class="mt-3 text-[11px] text-linen/50">* liczby przykładowe — wersja demo</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- IV. Kwiaty -->
+      <section id="kwiaty" data-z="-800" data-name="Kwiaty" class="chapter relative min-h-[170svh] px-4 sm:px-6" aria-labelledby="t-kwiaty">
+        <div class="sticky top-[18svh] mx-auto flex max-w-7xl justify-end">
+          <article class="card glass max-w-md rounded-[28px] p-7 sm:p-9">
+            <p class="eyebrow mb-4 text-sage"><em class="font-serif text-base tracking-normal text-blush normal-case">IV.</em> Kwiaty · Florystyka</p>
+            <h2 id="t-kwiaty" class="display text-[clamp(2.2rem,5vw,3.6rem)]">A potem ogród <em class="text-blush">wchodzi do domu.</em></h2>
+            <p class="mt-5 text-[15px] leading-relaxed text-linen/80">
+              Bukiety ślubne, dekoracje sal i wnętrz, kompozycje okolicznościowe i florystyka funeralna — z tą samą uważnością na kolor, fakturę i porę roku.
+            </p>
+            <ul class="mt-6 flex flex-wrap gap-2"><li class="chip">Bukiety ślubne</li><li class="chip">Dekoracje</li><li class="chip">Florystyka funeralna</li></ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- V. Pergola -->
+      <section id="pergola" data-z="-985" data-name="Pergola" class="chapter relative min-h-[150svh] px-4 sm:px-6" aria-labelledby="t-pergola">
+        <div class="sticky top-[18svh] mx-auto max-w-7xl">
+          <article class="card glass max-w-md rounded-[28px] p-7 sm:p-9">
+            <p class="eyebrow mb-4 text-sage"><em class="font-serif text-base tracking-normal text-blush normal-case">V.</em> Pergola · Opieka</p>
+            <h2 id="t-pergola" class="display text-[clamp(2.2rem,5vw,3.6rem)]">Ogród, który <em class="text-blush">dojrzewa.</em></h2>
+            <p class="mt-5 text-[15px] leading-relaxed text-linen/80">
+              Sezonowe cięcia, nawożenie, odnowa rabat i róż. Zostajemy z ogrodem na lata, żeby z każdym sezonem był piękniejszy niż w dniu oddania.
+            </p>
+            <ul class="mt-6 flex flex-wrap gap-2"><li class="chip">Pielęgnacja sezonowa</li><li class="chip">Abonament ogrodowy</li></ul>
+          </article>
+        </div>
+      </section>
+
+      <!-- Polana: kontakt -->
+      <section id="kontakt" data-z="-1060" data-name="Polana" class="chapter relative flex min-h-[100svh] items-end px-4 pt-28 pb-6 sm:px-6 sm:pb-10" aria-labelledby="t-kontakt">
+        <div class="card mx-auto grid w-full max-w-7xl gap-4 lg:grid-cols-12">
+          <div class="glass rounded-[28px] p-7 sm:p-9 lg:col-span-5">
+            <p class="eyebrow mb-4 text-sage">Koniec drogi · Polana</p>
+            <h2 id="t-kontakt" class="display text-[clamp(2.4rem,5.5vw,4.4rem)]">Zacznijmy <em class="text-blush">Twój ogród.</em></h2>
+            <p class="mt-5 text-[15px] leading-relaxed text-linen/80">Pierwsza konsultacja jest bezpłatna. Spotkania w biurze po wcześniejszym umówieniu telefonicznym.</p>
+            <address class="mt-7 grid gap-5 text-[14px] not-italic sm:grid-cols-2">
+              <div><span class="eyebrow block text-linen/55">Telefon</span><a class="mt-1 block font-serif text-xl" href="tel:+48668327731">668 327 731</a></div>
+              <div><span class="eyebrow block text-linen/55">E-mail</span><a class="mt-1 block break-all" href="mailto:greenartprzemkow@gmail.com">greenartprzemkow@gmail.com</a></div>
+              <div><span class="eyebrow block text-linen/55">Biuro</span><span class="mt-1 block">ul. Kaczanowska, Przemków</span></div>
+              <div><span class="eyebrow block text-linen/55">Godziny</span><span class="mt-1 block">pon–pt, 11:00–17:00</span></div>
+            </address>
+          </div>
+
+          <div class="glass rounded-[28px] p-7 sm:p-9 lg:col-span-7">
+            <form id="form" novalidate class="grid gap-6">
+              <p class="eyebrow text-linen/60">Napisz do nas — <span class="normal-case tracking-normal">Anna Rokosz odpowie w ciągu doby</span></p>
+              <div class="grid gap-6 sm:grid-cols-2">
+                <div><label for="f-name" class="sr-only">Imię i nazwisko</label><input id="f-name" name="name" autocomplete="name" class="field" placeholder="Imię i nazwisko" /><p class="err mt-2 hidden text-[12px] text-[#ffc3b3]" id="e-name">Podaj imię (min. 2 znaki).</p></div>
+                <div><label for="f-email" class="sr-only">E-mail</label><input id="f-email" name="email" type="email" autocomplete="email" class="field" placeholder="E-mail" /><p class="err mt-2 hidden text-[12px] text-[#ffc3b3]" id="e-email">Wpisz poprawny adres e-mail.</p></div>
+              </div>
+              <div><label for="f-msg" class="sr-only">Wiadomość</label><textarea id="f-msg" name="message" rows="3" class="field resize-none" placeholder="Opowiedz o swoim ogrodzie — metraż, styl, marzenia"></textarea><p class="err mt-2 hidden text-[12px] text-[#ffc3b3]" id="e-msg">Napisz kilka słów (min. 10 znaków).</p></div>
+              <label class="flex items-start gap-3 text-[13px] leading-relaxed text-linen/75"><input id="f-ok" type="checkbox" class="mt-0.5 h-5 w-5 shrink-0 accent-[#c97a55]" />Zgadzam się na kontakt w sprawie mojego zapytania.</label>
+              <p class="err -mt-3 hidden text-[12px] text-[#ffc3b3]" id="e-ok">Potrzebujemy zgody, by odpowiedzieć.</p>
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <button type="submit" class="btn">Wyślij zapytanie <span aria-hidden="true">→</span></button>
+                <a href="https://danieldoktorczyk-cell.github.io/greenart-ogrody/" class="text-[12px] text-linen/70 underline-offset-4 hover:underline">Wersja klasyczna strony ↗</a>
+              </div>
+              <p id="form-status" role="status" class="hidden rounded-xl bg-linen/10 p-4 text-[14px] text-linen"></p>
+            </form>
+          </div>
+          <p class="text-center text-[11px] text-linen/60 lg:col-span-12">© 2026 Green Art · Wersja demonstracyjna · Cały świat 3D wygenerowany w kodzie</p>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
