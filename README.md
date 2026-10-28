@@ -19,7 +19,7 @@ Cały świat powstaje w kodzie: teren, rośliny, niebo i woda. Strona nie używa
 ## Jak to działa (w skrócie)
 
 - Teren, drzewa, lawenda, bukszpan, kwiaty i róże są generowane w osobnym wątku (Web Worker), więc strona nie przycina się podczas ładowania.
-- Trawa to łatka ok. 150 tys. źdźbeł (50 tys. na telefonie), która „wędruje” razem z kamerą i kołysze się na wietrze w shaderze.
+- Trawa to łatka źdźbeł (260 tys. na mocnym komputerze, 50 tys. na telefonie), która „wędruje” razem z kamerą i kołysze się na wietrze w shaderze.
 - Pozycja przewijania wyznacza miejsce na ścieżce. Każda sekcja tekstu ma atrybut `data-z`, czyli punkt drogi, w którym się pojawia.
 - Na mocnych komputerach: miękkie cienie (drzewa, pergola, topiary — także na trawie), poświata jasnych miejsc (słońce, lampiony, wieniec) z wygładzaniem krawędzi i ok. 260 tys. źdźbeł trawy rosnącej w kępach.
 - Wszędzie: motyle, ważki nad stawem i opadające płatki (`src/world/critters.ts`).
