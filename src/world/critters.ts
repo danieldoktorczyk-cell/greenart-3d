@@ -112,7 +112,7 @@ export function butterflies(count: number) {
     // skrzydło obraca się wokół osi tułowia (Z)
     if (abs(p.x) > 0.001) p = rotZ(side * flap) * p;
     vShade = abs(p.y) > 0.0 ? 1.0 : 0.6;
-    p *= 0.24 + aSeed.w * 0.12;
+    p *= 0.1 + aSeed.w * 0.06;
     vec3 world = wrap(c) + rotY(heading) * p;
     world.y += uGround;
   `)

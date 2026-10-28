@@ -235,7 +235,7 @@ function generate(opts: GenOptions): GenResult {
     B('lily').add(x, WATER_LEVEL + 0.02, z, s, 1, s, R(0, 6.28), 0, 0, col)
     if (rnd() < 0.22) {
       col.setHSL(R(0.93, 0.99), R(0.5, 0.7), R(0.78, 0.88))
-      B('lotus').add(x + 0.15, WATER_LEVEL + 0.12, z, 0.22, 0.16, 0.22, R(0, 6.28), 0, 0, col)
+      B('lotus').add(x + 0.15, WATER_LEVEL + 0.08, z, 0.45, 0.45, 0.45, R(0, 6.28), 0, 0, col)
     }
   }
 
@@ -287,6 +287,17 @@ function generate(opts: GenOptions): GenResult {
 
   // pole kwiatów
   const flowerPal = ['#e9b8a6', '#c46a4a', '#f3ead8', '#b49ad1', '#a83a3a', '#f0c96a'].map(hex)
+  // jasna, słoneczna paleta dla pełnych kwiatów; gatunek losowany niezależnie od koloru
+  const tulipPal = ['#e8384a', '#f5874f', '#f7cf3e', '#f29bb4', '#ffffff'].map(hex)
+  const daisyPal = ['#fdfaf2', '#f7b3c8', '#c9a6ee', '#fbe7a2', '#ffffff'].map(hex)
+  const pickFlower = (pn: number) => {
+    const r = rnd()
+    const kind = r < 0.2 ? 'bud' : r < 0.2 + 0.35 + (pn - 0.5) * 0.3 ? 'tulip' : 'daisy'
+    const pal = kind === 'tulip' ? tulipPal : kind === 'daisy' ? daisyPal : rnd() < 0.5 ? tulipPal : daisyPal
+    const i = Math.min(pal.length - 1, Math.floor(((pn * 1.7 + rnd() * 0.9) % 1) * pal.length))
+    col.copy(pal[i]).multiplyScalar(R(0.92, 1.05))
+    return kind
+  }
   const nFlowers = hi ? 30000 : 9000
   for (let a = 0, n = 0; a < nFlowers * 2 && n < nFlowers; a++) {
     const z = R(FLOWERS.z1, FLOWERS.z0)
@@ -297,8 +308,30 @@ function generate(opts: GenOptions): GenResult {
     const pn = noise(x * 0.045, z * 0.045) * 0.5 + 0.5
     const ci = Math.min(flowerPal.length - 1, Math.floor((pn + R(-0.08, 0.08)) * flowerPal.length))
     col.copy(flowerPal[Math.max(0, ci)]).multiplyScalar(R(0.85, 1.1))
-    const s = R(0.09, 0.19)
-    B('flower').add(x, heightAt(x, z) + R(0.3, 0.7), z, s, s * 0.5, s, R(0, 6.28), R(-0.3, 0.3), R(-0.3, 0.3), col)
+    const d = Math.abs(x - pathX(z))
+    if (d < (hi ? 16 : 11)) {
+      // blisko ścieżki: pełne kwiaty z płatkami, liśćmi i pąkami
+      const kind = pickFlower(pn)
+      const s = R(1.25, 1.9)
+      B(kind).add(x, heightAt(x, z) - 0.02, z, s, s * R(0.85, 1.2), s, R(0, 6.28), R(-0.14, 0.14), R(-0.14, 0.14), col)
+    } else {
+      // dalej: same główki (z daleka i tak wyglądają jak plamy koloru)
+      const s = R(0.09, 0.19)
+      B('flower').add(x, heightAt(x, z) + R(0.3, 0.7), z, s, s * 0.5, s, R(0, 6.28), R(-0.3, 0.3), R(-0.3, 0.3), col)
+    }
+    n++
+  }
+
+  // dodatkowe pełne kwiaty tuż przy ścieżce, gdzie kamera schodzi nisko
+  for (let a = 0, n = 0, nNear = hi ? 9000 : 3000; a < nNear * 3 && n < nNear; a++) {
+    const z = R(FLOWERS.z1 + 6, FLOWERS.z0 - 6)
+    const side = rnd() < 0.5 ? -1 : 1
+    const d = 1.9 + Math.pow(rnd(), 1.4) * 12
+    const x = pathX(z) + side * d
+    const pn = noise(x * 0.045, z * 0.045) * 0.5 + 0.5
+    const kind = pickFlower(pn)
+    const s = R(1.25, 1.9)
+    B(kind).add(x, heightAt(x, z) - 0.02, z, s, s * R(0.85, 1.2), s, R(0, 6.28), R(-0.14, 0.14), R(-0.14, 0.14), col)
     n++
   }
 
@@ -319,18 +352,18 @@ function generate(opts: GenOptions): GenResult {
         B('wood').add(pathX(zz), y + 3.76, zz, 5.6, 0.08, 0.14)
       }
     }
-    for (let r = 0; r < (hi ? 80 : 45); r++) {
+    for (let r = 0; r < (hi ? 110 : 55); r++) {
       const onPost = rnd() < 0.55
       const side = rnd() < 0.5 ? -1 : 1
       const rx = onPost ? cx + side * (2.5 + R(-0.35, 0.35)) : cx + R(-2.9, 2.9)
       const ry = onPost ? y + R(0.3, 3.4) : y + 3.5 + R(-0.25, 0.35)
       const rz = onPost ? z + R(-0.4, 0.4) : z - R(0, 6)
       col.copy(rosePal[Math.floor(rnd() * rosePal.length)])
-      const s = R(0.07, 0.14)
-      B('rose').add(rx, ry, rz, s, s, s, R(0, 6.28), 0, 0, col)
+      const s = R(0.12, 0.2)
+      B('rose').add(rx, ry, rz, s, s, s, R(0, 6.28), R(-0.9, 0.9), R(-0.9, 0.9), col)
       if (rnd() < 0.5) {
         col.setHSL(0.3, 0.45, R(0.18, 0.28))
-        B('leaf').add(rx + R(-0.2, 0.2), ry + R(-0.2, 0.2), rz + R(-0.2, 0.2), s * 1.4, s * 0.5, s, R(0, 6.28), R(-1, 1), 0, col)
+        B('leaf').add(rx + R(-0.2, 0.2), ry + R(-0.2, 0.2), rz + R(-0.2, 0.2), s * 1.6, s * 1.6, s * 1.6, R(0, 6.28), R(-0.8, 0.8), R(-0.5, 0.5), col)
       }
     }
     if (arch % 2 === 0) B('lantern').add(cx, y + 2.85, z, 0.16, 0.22, 0.16)

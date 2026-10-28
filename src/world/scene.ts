@@ -37,6 +37,7 @@ import { createGlows, createGrass, createMotes, createSky, createWater, heightTe
 import type { GenResult } from './gen.worker'
 import { createLogo } from './logo'
 import * as props from './props'
+import * as fl from './flowers'
 import { FINALE, PARTERRE, POND, WATER_LEVEL, camKeyAt, heightAt, pathX, pathY } from './shape'
 
 export type Quality = 'high' | 'low'
@@ -149,15 +150,21 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
   add('rock', rockGeo, lambert())
   add('stone', props.stone(), lambert(), true, false, true)
   add('lily', props.lilyPad(), new MeshLambertMaterial({ color: '#ffffff' }), true, false, true)
-  add('lotus', props.flowerHead(), new MeshLambertMaterial({ color: '#ffffff', emissive: '#3a1f24' }), true, false)
+  add('lotus', fl.lotus(), fl.flowerMaterial(0.02, '#4a3036'), true, false)
   await pause()
-  add('lavender', props.lavender(), windy(lambert(), 0.12), true, true, true)
+  add('lavender', props.lavender(), windy(lambert(), 0.12), true, false, true)
   add('box', props.boxwood(), lambert(), true, true, true)
   add('cone', props.topiaryCone(), lambert())
   await pause()
   add('flower', props.flowerHead(), windy(new MeshLambertMaterial({ color: '#ffffff', emissive: '#2a2018' }), 0.35, true), true, false, true)
-  add('rose', props.blossom(), windy(new MeshLambertMaterial({ color: '#ffffff', emissive: '#2a1414' }), 0.25, true))
-  add('leaf', props.flowerHead(), new MeshLambertMaterial({ color: '#ffffff' }))
+  add('rose', fl.rose(), fl.flowerMaterial(0.06, '#5a2a2e'))
+  add('leaf', fl.roseLeaf(), fl.flowerMaterial(0.04))
+  // szczegółowe kwiaty przy ścieżce
+  const flowerMat = fl.flowerMaterial(0.35)
+  // drobne kwiaty tylko przyjmują cienie (ich własne byłyby niewidoczne, a kosztowne)
+  add('daisy', fl.daisy(), flowerMat, true, false, true)
+  add('tulip', fl.tulip(), flowerMat, true, false, true)
+  add('bud', fl.bud(), flowerMat, true, false, true)
   add('wood', props.wood(), new MeshLambertMaterial({ color: '#7d5c40' }), false, true, true)
   // lampion świeci mocniej niż biel — dzięki temu łapie poświatę (bloom)
   const lanternMat = new MeshBasicMaterial()

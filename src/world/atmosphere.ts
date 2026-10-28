@@ -19,20 +19,20 @@ type Key = {
 }
 
 const KEYS: Key[] = [
-  // brama — poranna, zielono-złota mgła
-  { z: 30, top: '#9fbfae', horizon: '#eef0cf', fog: '#dfe4c2', density: 0.0092, sun: '#fff1cf', sunEl: 14, sunAz: 8, hemiSky: '#f3f2d6', hemiGround: '#4c5a2c', sunI: 2.4, hemiI: 1.25, grassTip: '#b6c463', glow: 0.35 },
-  // łąka — jasny dzień
-  { z: -170, top: '#86b2cb', horizon: '#e8efdc', fog: '#d8e4d6', density: 0.0068, sun: '#fff6e2', sunEl: 34, sunAz: 20, hemiSky: '#eaf2f4', hemiGround: '#4d5d2e', sunI: 2.8, hemiI: 1.15, grassTip: '#a9bd58', glow: 0.25 },
-  // parter — czyste południe
-  { z: -380, top: '#6f9fc4', horizon: '#dfeae6', fog: '#d3e1df', density: 0.0052, sun: '#ffffff', sunEl: 55, sunAz: 35, hemiSky: '#e7f0f6', hemiGround: '#53632f', sunI: 3.0, hemiI: 1.1, grassTip: '#a5bd55', glow: 0.2 },
-  // staw — zamglona, chłodna cisza
-  { z: -600, top: '#87a5a3', horizon: '#cbd9cf', fog: '#c3d3c9', density: 0.0145, sun: '#eef6ee', sunEl: 26, sunAz: -30, hemiSky: '#dbe8e2', hemiGround: '#3b4a33', sunI: 1.7, hemiI: 1.35, grassTip: '#93ab5c', glow: 0.55 },
-  // kwiaty — ciepłe popołudnie
-  { z: -800, top: '#97b3c9', horizon: '#f3e2c4', fog: '#ecdcc0', density: 0.0072, sun: '#ffe2b0', sunEl: 18, sunAz: -15, hemiSky: '#f6ead6', hemiGround: '#5c5a2e', sunI: 2.7, hemiI: 1.1, grassTip: '#c2bf5c', glow: 0.4 },
+  // brama — słoneczny poranek, lekka złocista mgiełka nad trawą
+  { z: 30, top: '#6ea9dc', horizon: '#f2efd8', fog: '#e4ead9', density: 0.0042, sun: '#fff0cc', sunEl: 20, sunAz: 10, hemiSky: '#f6f3dc', hemiGround: '#55652f', sunI: 3.0, hemiI: 1.2, grassTip: '#bccb5e', glow: 0.25 },
+  // łąka — bezchmurny, jasny dzień
+  { z: -170, top: '#4f97d8', horizon: '#e6f0f4', fog: '#dbe8ef', density: 0.003, sun: '#fff8e8', sunEl: 40, sunAz: 22, hemiSky: '#eef6fb', hemiGround: '#56682f', sunI: 3.3, hemiI: 1.1, grassTip: '#b2c85a', glow: 0.15 },
+  // parter — słoneczne południe
+  { z: -380, top: '#3f8ad4', horizon: '#e2eef6', fog: '#d8e7f1', density: 0.0026, sun: '#ffffff', sunEl: 58, sunAz: 35, hemiSky: '#ecf4fb', hemiGround: '#5a6c31', sunI: 3.4, hemiI: 1.05, grassTip: '#acc457', glow: 0.12 },
+  // staw — rześkie, słoneczne przedpołudnie z błękitem w wodzie
+  { z: -600, top: '#4a93d6', horizon: '#e4f0f2', fog: '#d9e8ec', density: 0.0034, sun: '#fffaf0', sunEl: 34, sunAz: -25, hemiSky: '#eaf4f6', hemiGround: '#4f6234', sunI: 3.1, hemiI: 1.15, grassTip: '#a8c35c', glow: 0.2 },
+  // kwiaty — ciepłe, słoneczne popołudnie
+  { z: -800, top: '#5b9bd4', horizon: '#f6ead2', fog: '#efe6d4', density: 0.0032, sun: '#ffe7bd', sunEl: 24, sunAz: -15, hemiSky: '#f8eedc', hemiGround: '#62652f', sunI: 3.2, hemiI: 1.05, grassTip: '#c4c45c', glow: 0.3 },
   // pergola — złota godzina
-  { z: -990, top: '#5d6b8a', horizon: '#f4b98e', fog: '#e9ad88', density: 0.0105, sun: '#ffb46e', sunEl: 6, sunAz: -5, hemiSky: '#f6c9a6', hemiGround: '#4a3a2c', sunI: 2.2, hemiI: 0.95, grassTip: '#c79b54', glow: 1 },
-  // polana — zmierzch
-  { z: -1080, top: '#2f3756', horizon: '#e79a7a', fog: '#c98a77', density: 0.0095, sun: '#ff9a62', sunEl: 2.5, sunAz: 0, hemiSky: '#c99a8e', hemiGround: '#2f2a26', sunI: 1.5, hemiI: 0.8, grassTip: '#a77f4f', glow: 1.3 },
+  { z: -990, top: '#6b86b8', horizon: '#f8c79a', fog: '#f1c7a2', density: 0.0045, sun: '#ffbe78', sunEl: 8, sunAz: -5, hemiSky: '#f8d6b4', hemiGround: '#55432e', sunI: 2.7, hemiI: 1.0, grassTip: '#cfa75a', glow: 0.9 },
+  // polana — ciepły zachód słońca
+  { z: -1080, top: '#4f68a0', horizon: '#f4ad82', fog: '#e9ad8c', density: 0.0048, sun: '#ffa868', sunEl: 4, sunAz: 0, hemiSky: '#e9b49a', hemiGround: '#3f3429', sunI: 2.1, hemiI: 0.9, grassTip: '#bf9152', glow: 1.15 },
 ]
 
 export type Atmo = {

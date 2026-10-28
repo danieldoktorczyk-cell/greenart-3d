@@ -61,12 +61,15 @@ export function createSky() {
       void main() {
         vec3 d = normalize(vDir);
         float y = d.y;
-        vec3 col = mix(uHorizon, uTop, pow(smoothstep(-0.05, 1.0, y), 0.6));
+        // błękit zaczyna się już nisko nad horyzontem — pogodne niebo zamiast szarej mgły
+        vec3 col = mix(uHorizon, uTop, pow(smoothstep(-0.03, 0.42, y), 0.75));
         // miękkie, wolno płynące chmury
         vec2 cp = d.xz / max(y + 0.25, 0.08) * 1.4 + vec2(uTime * 0.004, 0.0);
         float c = vnoise(cp) * 0.6 + vnoise(cp * 2.7) * 0.3 + vnoise(cp * 6.1) * 0.1;
-        c = smoothstep(0.55, 0.9, c) * smoothstep(0.0, 0.25, y);
-        col = mix(col, mix(uHorizon, vec3(1.0), 0.5), c * 0.55);
+        // białe, puszyste chmury pogodnego dnia, od spodu lekko zacienione
+        float cl = smoothstep(0.6, 0.88, c) * smoothstep(0.03, 0.3, y);
+        vec3 cloud = mix(vec3(0.82, 0.86, 0.92), vec3(1.0), smoothstep(0.55, 0.95, c));
+        col = mix(col, cloud * mix(vec3(1.0), uSun, 0.25), cl * 0.85);
         float sd = max(dot(d, normalize(uSunDir)), 0.0);
         col += uSun * (pow(sd, 1400.0) * 9.0 + pow(sd, 40.0) * 0.45 + pow(sd, 5.0) * 0.18);
         gl_FragColor = vec4(col, 1.0);
