@@ -20,7 +20,7 @@ type Key = {
 
 const KEYS: Key[] = [
   // brama — słoneczny poranek, lekka złocista mgiełka nad trawą
-  { z: 30, top: '#6ea9dc', horizon: '#f2efd8', fog: '#e4ead9', density: 0.0042, sun: '#fff0cc', sunEl: 20, sunAz: 10, hemiSky: '#f6f3dc', hemiGround: '#55652f', sunI: 3.0, hemiI: 1.2, grassTip: '#bccb5e', glow: 0.25 },
+  { z: 30, top: '#4f97d8', horizon: '#e3edf2', fog: '#dce8ee', density: 0.0022, sun: '#fff0cc', sunEl: 20, sunAz: 10, hemiSky: '#f6f3dc', hemiGround: '#55652f', sunI: 3.0, hemiI: 1.2, grassTip: '#bccb5e', glow: 0.25 },
   // łąka — bezchmurny, jasny dzień
   { z: -170, top: '#4f97d8', horizon: '#e6f0f4', fog: '#dbe8ef', density: 0.003, sun: '#fff8e8', sunEl: 40, sunAz: 22, hemiSky: '#eef6fb', hemiGround: '#56682f', sunI: 3.3, hemiI: 1.1, grassTip: '#b2c85a', glow: 0.15 },
   // parter — słoneczne południe

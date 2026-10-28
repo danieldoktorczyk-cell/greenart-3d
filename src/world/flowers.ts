@@ -2,14 +2,14 @@
  * Szczegółowe kwiaty: każdy płatek, pąk i liść to osobny, wygięty kawałek geometrii.
  * Atrybut aPetal mówi, które części przyjmują kolor instancji (płatki), a które zostają zielone (łodyga, liście).
  */
-import { BufferGeometry, Color, DoubleSide, Float32BufferAttribute, IcosahedronGeometry, CylinderGeometry, MeshLambertMaterial } from 'three'
+import { OctahedronGeometry, BufferGeometry, Color, DoubleSide, Float32BufferAttribute, IcosahedronGeometry, CylinderGeometry, MeshLambertMaterial } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { shared } from './fx'
 
 const C = (h: string) => new Color(h)
 
 /** Ujednolica część: bez indeksów, z normalnymi, kolorem i maską płatka */
-function part(g: BufferGeometry, color: Color, petal: number, shade?: Float32Array) {
+export function part(g: BufferGeometry, color: Color, petal: number, shade?: Float32Array) {
   const ng = g.index ? g.toNonIndexed() : g
   for (const k of Object.keys(ng.attributes)) if (k !== 'position') ng.deleteAttribute(k)
   ng.computeVertexNormals()
@@ -30,7 +30,7 @@ function part(g: BufferGeometry, color: Color, petal: number, shade?: Float32Arr
  * Płatek lub liść: siatka wzdłuż osi X, zaokrąglony kształt, wygięty ku górze (cup)
  * i lekko wklęsły w poprzek. Środek (żyłka) jest jaśniejszy, nasada ciemniejsza.
  */
-function blade(len: number, wid: number, cup: number, opts: { segs?: number; across?: number; point?: number } = {}) {
+export function blade(len: number, wid: number, cup: number, opts: { segs?: number; across?: number; point?: number } = {}) {
   const segs = opts.segs ?? 4
   const across = opts.across ?? 0.45
   const point = opts.point ?? 0.75
@@ -104,8 +104,8 @@ export function daisy() {
   return mergeGeometries([
     stem(head),
     center,
-    ...ring(11, 0.075, 0.016, 0.25, 0.14, head, WHITE, 1),
-    ...ring(7, 0.055, 0.014, 0.4, 0.3, head + 0.004, WHITE, 1, 0.3),
+    ...ring(11, 0.075, 0.016, 0.25, 0.14, head, WHITE, 1, 0, { segs: 2 }),
+    ...ring(7, 0.055, 0.014, 0.4, 0.3, head + 0.004, WHITE, 1, 0.3, { segs: 2 }),
     ...leaves([
       [0.12, 0.4, 0.13, 0.024],
       [0.24, 2.6, 0.11, 0.022],
@@ -136,6 +136,105 @@ export function bud() {
     ...ring(4, 0.03, 0.012, 0.3, 0.85, head - 0.003, GREEN, 0, 0.4),
     ...leaves([[0.15, 1.2, 0.11, 0.02]]),
   ])
+}
+
+/** Słonecznik: wysoka łodyga, duża tarcza i promieniste płatki; kwiat lekko odwrócony w bok */
+export function sunflower() {
+  const head = 0.92
+  const disc = part(new CylinderGeometry(0.06, 0.05, 0.03, 18), C('#4a2f14'), 0)
+  const rays = mergeGeometries([
+    disc,
+    ...ring(18, 0.07, 0.017, 0.15, 0.08, 0, WHITE, 1, 0, { segs: 2 }),
+    ...ring(14, 0.055, 0.015, 0.25, 0.22, 0.006, WHITE, 1, 0.12, { segs: 2 }),
+  ])
+  rays.rotateX(1.15)
+  rays.translate(0, head, 0.03)
+  return mergeGeometries([
+    stem(head, 0.011),
+    rays,
+    ...leaves([
+      [0.3, 0.3, 0.18, 0.07],
+      [0.48, 2.9, 0.16, 0.065],
+      [0.66, 1.6, 0.13, 0.055],
+    ]),
+  ])
+}
+
+/** Mak: cztery szerokie, pomarszczone płatki w miseczce i ciemny środek */
+export function poppy() {
+  const head = 0.48
+  const center = part(new IcosahedronGeometry(0.014, 1), C('#2a2230'), 0)
+  center.translate(0, head + 0.012, 0)
+  return mergeGeometries([
+    stem(head, 0.0045),
+    center,
+    ...ring(4, 0.055, 0.05, 0.75, 0.62, head, WHITE, 1, 0, { across: 0.5, point: 0.45 }),
+    ...ring(2, 0.03, 0.012, 0.3, 0.6, 0.18, GREEN, 0, 0.7),
+    ...leaves([[0.06, 1.0, 0.14, 0.03]]),
+  ])
+}
+
+/** Czosnek ozdobny: kula drobnych kwiatków na wysokiej, gołej łodydze */
+export function allium() {
+  const head = 0.68
+  const florets: BufferGeometry[] = []
+  const n = 30
+  for (let i = 0; i < n; i++) {
+    // równomierne rozłożenie na kuli (spirala Fibonacciego)
+    const y = 1 - (2 * (i + 0.5)) / n
+    const r = Math.sqrt(1 - y * y)
+    const a = i * 2.39996
+    const f = part(new OctahedronGeometry(0.011, 0), WHITE, 1)
+    f.translate(Math.cos(a) * r * 0.055, head + y * 0.055, Math.sin(a) * r * 0.055)
+    florets.push(f)
+  }
+  const core = part(new IcosahedronGeometry(0.045, 1), C('#ffffff').multiplyScalar(0.7), 1)
+  core.translate(0, head, 0)
+  return mergeGeometries([
+    stem(head, 0.006),
+    core,
+    ...florets,
+    ...leaves([
+      [0.02, 0.5, 0.2, 0.025],
+      [0.02, 3.6, 0.18, 0.022],
+    ]),
+  ])
+}
+
+/** Łubin: kłos dzwonkowatych kwiatów zwężający się ku górze i palczaste liście u dołu */
+export function lupine() {
+  const top = 0.62
+  const bells: BufferGeometry[] = []
+  const levels = 13
+  for (let l = 0; l < levels; l++) {
+    const k = l / (levels - 1)
+    const y = top - 0.26 + k * 0.26
+    const sz = 0.024 * (1 - k * 0.55)
+    for (let j = 0; j < 3; j++) {
+      const b = part(new OctahedronGeometry(sz, 0), C('#ffffff').multiplyScalar(0.85 + 0.15 * k), 1)
+      b.scale(1, 0.7, 1)
+      const a = j * ((Math.PI * 2) / 3) + l * 0.7
+      b.translate(Math.cos(a) * sz * 1.1, y, Math.sin(a) * sz * 1.1)
+      bells.push(b)
+    }
+  }
+  const palm = Array.from({ length: 7 }, (_, i) => {
+    const { g, shade } = blade(0.09, 0.016, 0.1, { segs: 3, across: 0.3 })
+    const geo = part(g, LEAF, 0, shade)
+    geo.rotateZ(0.35)
+    geo.rotateY((i / 7) * Math.PI * 2)
+    geo.translate(0, 0.14, 0)
+    return geo
+  })
+  return mergeGeometries([stem(top, 0.007), ...bells, ...palm])
+}
+
+/** Kwiat z daleka: sama kolorowa główka na wysokości kwiatu */
+export function flowerDot() {
+  const g = part(new IcosahedronGeometry(0.045, 0), WHITE, 1)
+  g.scale(1, 0.6, 1)
+  g.translate(0, 0.47, 0)
+  return g
 }
 
 /** Róża (rozmiar jednostkowy): trzy okółki zwijających się płatków wokół zwartego środka */

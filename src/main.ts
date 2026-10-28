@@ -119,6 +119,7 @@ async function boot() {
   setLoad(78)
   try {
     world = await mod.createWorld(canvas, data, quality, setLoad)
+    if (import.meta.env.DEV) Object.assign(window, { __world: world })
   } catch {
     document.documentElement.classList.add('no-gl')
     hideLoader()

@@ -12,6 +12,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
+  DoubleSide,
   PCFSoftShadowMap,
   PMREMGenerator,
   PerspectiveCamera,
@@ -38,6 +39,7 @@ import type { GenResult } from './gen.worker'
 import { createLogo } from './logo'
 import * as props from './props'
 import * as fl from './flowers'
+import * as fo from './foliage'
 import { FINALE, PARTERRE, POND, WATER_LEVEL, camKeyAt, heightAt, pathX, pathY } from './shape'
 
 export type Quality = 'high' | 'low'
@@ -114,64 +116,118 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
   onProgress(80)
   await pause()
 
+  const camPos = new Vector3()
+  const look = new Vector3()
+  const lodCells: { center: Vector3; radius: number; near: InstancedMesh; far?: InstancedMesh; lodDist: number; maxDist: number }[] = []
+  /** Pokazuje pełne lub uproszczone wersje obiektów zależnie od odległości od kamery */
+  const updateLod = () => {
+    for (const c of lodCells) {
+      const dist = camPos.distanceTo(c.center) - c.radius
+      const nearOn = dist < c.lodDist
+      c.near.visible = nearOn
+      if (c.far) c.far.visible = !nearOn && dist < c.maxDist
+    }
+  }
+
   // ——— Trawa ———
   const tex = heightTexture(data.tex.data, data.tex.w, data.tex.h)
-  const grass = createGrass(tex, hi ? 260000 : 50000, hi ? 64 : 42, hi)
+  const grass = createGrass(tex, hi ? 220000 : 55000, hi ? 52 : 36, hi)
   scene.add(grass.mesh)
   await pause()
 
   // ——— Obiekty (instancje) ———
+  // Świat jest podzielony na komórki 120×120 m: karta graficzna rysuje tylko te w kadrze (także przy cieniach),
+  // a z daleka pełne liście i płatki zastępuje lżejszą bryłą.
   const lambert = (o: ConstructorParameters<typeof MeshLambertMaterial>[0] = {}) => new MeshLambertMaterial({ vertexColors: true, ...o })
-  const add = (name: string, geo: BG, mat: Material, colors = true, cast = true, receive = false) => {
+  type AddOpts = { colors?: boolean; cast?: boolean; receive?: boolean; maxDist?: number; lod?: { geo: BG; mat: Material; dist: number } }
+  const CELL = 120
+  const q = hi ? 1 : 0.6
+  const add = (name: string, geo: BG, mat: Material, o: AddOpts = {}) => {
     const d = data.inst[name]
-    if (!d) return null
-    const n = d.m.length / 16
-    const mesh = new InstancedMesh(geo, mat, n)
-    mesh.instanceMatrix = new InstancedBufferAttribute(d.m, 16)
-    if (colors && d.c) mesh.instanceColor = new InstancedBufferAttribute(d.c, 3)
-    mesh.computeBoundingSphere()
-    mesh.castShadow = hi && cast
-    mesh.receiveShadow = hi && receive
-    scene.add(mesh)
-    return mesh
+    if (!d) return
+    const { colors = true, cast = true, receive = false, maxDist = Infinity, lod } = o
+    const cells = new Map<string, number[]>()
+    for (let i = 0; i < d.m.length / 16; i++) {
+      const key = Math.floor(d.m[i * 16 + 12] / CELL) + ',' + Math.floor(d.m[i * 16 + 14] / CELL)
+      let list = cells.get(key)
+      if (!list) cells.set(key, (list = []))
+      list.push(i)
+    }
+    for (const ids of cells.values()) {
+      const m = new Float32Array(ids.length * 16)
+      const c = colors && d.c ? new Float32Array(ids.length * 3) : null
+      ids.forEach((id, k) => {
+        m.set(d.m.subarray(id * 16, id * 16 + 16), k * 16)
+        if (c && d.c) c.set(d.c.subarray(id * 3, id * 3 + 3), k * 3)
+      })
+      const mAttr = new InstancedBufferAttribute(m, 16)
+      const cAttr = c ? new InstancedBufferAttribute(c, 3) : null
+      const make = (g: BG, mt: Material) => {
+        const mesh = new InstancedMesh(g, mt, ids.length)
+        mesh.instanceMatrix = mAttr
+        if (cAttr) mesh.instanceColor = cAttr
+        mesh.computeBoundingSphere()
+        mesh.castShadow = hi && cast
+        mesh.receiveShadow = hi && receive
+        scene.add(mesh)
+        return mesh
+      }
+      const near = make(geo, mat)
+      const far = lod ? make(lod.geo, lod.mat) : undefined
+      if (lod || maxDist < Infinity) {
+        const bs = near.boundingSphere!
+        lodCells.push({ center: bs.center.clone(), radius: bs.radius, near, far, lodDist: (lod ? lod.dist : maxDist) * q, maxDist: maxDist * q })
+      }
+    }
   }
   const trunkMat = new MeshLambertMaterial({ color: '#5a4636' })
   const trunkGeo = props.trunk()
   const canopy = props.treeCanopy()
-  add('tree', canopy, windy(lambert(), 0.02))
-  add('tree', trunkGeo, trunkMat, false)
-  add('maple', canopy, windy(lambert(), 0.03))
-  add('maple', trunkGeo, trunkMat, false)
-  add('conifer', props.conifer(), lambert())
-  add('conifer', trunkGeo, trunkMat, false)
-  add('poplar', props.poplar(), windy(lambert(), 0.015))
+  // korony z gałązek z liśćmi (dwustronne, bo liście są cienkie)
+  const leafy = (amp: number) => windy(lambert({ side: DoubleSide }), amp)
+  const blobMat = windy(lambert(), 0.02)
+  const crown = fo.leafyTree(hi)
+  add('tree', crown, leafy(0.02), { lod: { geo: canopy, mat: blobMat, dist: 110 } })
+  add('tree', trunkGeo, trunkMat, { colors: false })
+  add('treeFar', canopy, blobMat)
+  add('treeFar', trunkGeo, trunkMat, { colors: false })
+  add('maple', crown, leafy(0.03), { lod: { geo: canopy, mat: blobMat, dist: 110 } })
+  add('maple', trunkGeo, trunkMat, { colors: false })
+  add('conifer', fo.spruce(hi), lambert({ side: DoubleSide }), { lod: { geo: props.conifer(), mat: lambert(), dist: 140 } })
+  add('conifer', trunkGeo, trunkMat, { colors: false })
+  add('poplar', fo.leafyPoplar(hi), leafy(0.015), { lod: { geo: props.poplar(), mat: blobMat, dist: 110 } })
+  const shrubFar = fo.shrubLod()
+  add('shrub', fo.shrub(hi, false), leafy(0.05), { receive: true, lod: { geo: shrubFar, mat: lambert(), dist: 70 } })
+  const shrubFlowerMat = fl.flowerMaterial(0.05, '#20201a')
+  add('shrubFlower', fo.shrub(hi, true), shrubFlowerMat, { receive: true, lod: { geo: shrubFar, mat: shrubFlowerMat, dist: 70 } })
   await pause()
-  const rockGeo = props.rock()
-  add('rock', rockGeo, lambert())
-  add('stone', props.stone(), lambert(), true, false, true)
-  add('lily', props.lilyPad(), new MeshLambertMaterial({ color: '#ffffff' }), true, false, true)
-  add('lotus', fl.lotus(), fl.flowerMaterial(0.02, '#4a3036'), true, false)
+  add('rock', fo.boulder(), lambert(), { receive: true })
+  add('stone', fo.flagstone(), lambert(), { cast: false, receive: true })
+  add('pebble', fo.pebble(), lambert(), { cast: false, receive: true, maxDist: 45 })
+  add('lily', props.lilyPad(), new MeshLambertMaterial({ color: '#ffffff' }), { cast: false, receive: true })
+  add('lotus', fl.lotus(), fl.flowerMaterial(0.02, '#4a3036'), { cast: false })
   await pause()
-  add('lavender', props.lavender(), windy(lambert(), 0.12), true, false, true)
-  add('box', props.boxwood(), lambert(), true, true, true)
+  add('lavender', props.lavender(), windy(lambert(), 0.12), { cast: false, receive: true, maxDist: 220 })
+  add('box', fo.clippedBox(), lambert(), { receive: true })
   add('cone', props.topiaryCone(), lambert())
   await pause()
-  add('flower', props.flowerHead(), windy(new MeshLambertMaterial({ color: '#ffffff', emissive: '#2a2018' }), 0.35, true), true, false, true)
-  add('rose', fl.rose(), fl.flowerMaterial(0.06, '#5a2a2e'))
-  add('leaf', fl.roseLeaf(), fl.flowerMaterial(0.04))
-  // szczegółowe kwiaty przy ścieżce
+  add('flower', props.flowerHead(), windy(new MeshLambertMaterial({ color: '#ffffff', emissive: '#2a2018' }), 0.35, true), { cast: false, receive: true })
+  add('rose', fl.rose(), fl.flowerMaterial(0.06, '#5a2a2e'), { maxDist: 90 })
+  add('leaf', fl.roseLeaf(), fl.flowerMaterial(0.04), { maxDist: 90 })
+  // szczegółowe kwiaty przy ścieżce; z daleka zastępuje je kolorowa kropka na wysokości główki
   const flowerMat = fl.flowerMaterial(0.35)
-  // drobne kwiaty tylko przyjmują cienie (ich własne byłyby niewidoczne, a kosztowne)
-  add('daisy', fl.daisy(), flowerMat, true, false, true)
-  add('tulip', fl.tulip(), flowerMat, true, false, true)
-  add('bud', fl.bud(), flowerMat, true, false, true)
-  add('wood', props.wood(), new MeshLambertMaterial({ color: '#7d5c40' }), false, true, true)
+  const dot = fl.flowerDot()
+  for (const kind of ['daisy', 'tulip', 'bud', 'poppy', 'sunflower', 'allium', 'lupine'] as const)
+    add(kind, fl[kind](), flowerMat, { cast: false, receive: true, maxDist: 320, lod: { geo: dot, mat: flowerMat, dist: 45 } })
+  add('wood', props.wood(), new MeshLambertMaterial({ color: '#7d5c40' }), { colors: false, receive: true })
   // lampion świeci mocniej niż biel — dzięki temu łapie poświatę (bloom)
   const lanternMat = new MeshBasicMaterial()
-  lanternMat.color.setRGB(4, 2.6, 1.3)
+  // bez poświaty (telefon) zwykły ciepły kolor, inaczej lampion byłby białą plamą
+  if (hi) lanternMat.color.setRGB(4, 2.6, 1.3)
+  else lanternMat.color.set('#ffc98a')
   const lanternGeo = props.lantern()
   lanternGeo.scale(0.55, 0.55, 0.55)
-  add('lantern', lanternGeo, lanternMat, false, false)
+  add('lantern', lanternGeo, lanternMat, { colors: false, cast: false })
 
   onProgress(86)
   await pause()
@@ -250,8 +306,6 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
   const draw = () => (composer ? composer.render() : renderer.render(scene, camera))
 
   // ——— Kamera ———
-  const camPos = new Vector3()
-  const look = new Vector3()
   const fwd = new Vector3()
   const pointer = { x: 0, y: 0, sx: 0, sy: 0 }
   let lastZ = Number.NaN
@@ -330,18 +384,26 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
       l.group.rotation.x = Math.sin(t * 0.25) * 0.06
       l.group.position.y = (base === 4 ? pathY(4) + 3.4 : pathY(FINALE.z) + 11) + Math.sin(t * 0.8) * 0.25
     }
+    updateLod()
     draw()
   }
 
   return {
     renderer,
+    scene,
     setSize,
     render,
     pointer,
     /** Kompiluje shadery (równolegle, jeśli przeglądarka pozwala) i wysyła dane do karty graficznej */
     async warmup(z: number) {
       placeCamera(z)
+      // kompilujemy shadery wszystkich wariantów, potem włączamy właściwe
+      for (const c of lodCells) {
+        c.near.visible = true
+        if (c.far) c.far.visible = true
+      }
       await renderer.compileAsync(scene, camera).catch(() => {})
+      updateLod()
       draw()
       onProgress(100)
     },

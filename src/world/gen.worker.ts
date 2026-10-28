@@ -59,9 +59,9 @@ class Batch {
 
 const hex = (h: string) => new Color(h)
 const P = {
-  grassDark: hex('#2f4a22'),
-  grass: hex('#55772f'),
-  grassLight: hex('#8ea24a'),
+  grassDark: hex('#3c6127'),
+  grass: hex('#5a8a32'),
+  grassLight: hex('#7fa840'),
   hilltop: hex('#a3a957'),
   dirt: hex('#9b8460'),
   gravel: hex('#d9ceb5'),
@@ -180,7 +180,7 @@ function generate(opts: GenOptions): GenResult {
     const conifer = h - pathY(z) > 16 && rnd() < 0.55
     const s = R(3.2, 7.5) * (d < 30 ? 0.8 : 1)
     col.setHSL(conifer ? R(0.3, 0.38) : R(0.2, 0.3), R(0.35, 0.55), conifer ? R(0.13, 0.2) : R(0.22, 0.36))
-    B(conifer ? 'conifer' : 'tree').add(x, h - 0.3, z, s, s * R(0.9, 1.35), s, R(0, 6.28), 0, 0, col)
+    B(conifer ? 'conifer' : d < 80 ? 'tree' : 'treeFar').add(x, h - 0.3, z, s, s * R(0.9, 1.35), s, R(0, 6.28), 0, 0, col)
     placed++
   }
   // klony japońskie przy stawie i na polanie
@@ -202,7 +202,7 @@ function generate(opts: GenOptions): GenResult {
     for (let z = z0; z > z1; z -= 7)
       for (const side of [-1, 1]) {
         const x = pathX(z) + side * 6.5
-        col.setHSL(R(0.25, 0.3), 0.45, R(0.2, 0.26))
+        col.setHSL(R(0.24, 0.29), 0.5, R(0.3, 0.38))
         B('poplar').add(x, heightAt(x, z) - 0.2, z, R(1.5, 1.8), R(6.5, 8), R(1.5, 1.8), R(0, 6.28), 0, 0, col)
       }
 
@@ -221,7 +221,7 @@ function generate(opts: GenOptions): GenResult {
   for (let z = POND.z + POND.rz * 1.15; z > POND.z - POND.rz * 1.15; z -= 1.45) {
     const x = pathX(z) + R(-0.3, 0.3)
     if (pondE(x, z) > 1.12) continue
-    B('stone').add(x, WATER_LEVEL + 0.06, z, R(0.75, 0.95), R(0.18, 0.24), R(0.6, 0.75), R(0, 6.28))
+    B('stone').add(x, WATER_LEVEL + 0.04, z, R(0.62, 0.78), R(0.9, 1.1), R(0.52, 0.66), R(0, 6.28))
   }
   // liście lilii wodnych + kwiaty
   for (let a = 0; a < 600 && (inst.lily?.m.length ?? 0) / 16 < 170; a++) {
@@ -259,7 +259,7 @@ function generate(opts: GenOptions): GenResult {
       const e = 0.75
       if (grassAt(x + e, z) && grassAt(x - e, z) && grassAt(x, z + e) && grassAt(x, z - e)) continue
       col.setHSL(R(0.27, 0.31), R(0.4, 0.5), R(0.16, 0.21))
-      B('box').add(x, pathY(PARTERRE.z) + 0.25, z, 0.46, 0.5, 0.46, R(0, 6.28), 0, 0, col)
+      B('box').add(x, pathY(PARTERRE.z) + 0.3, z, 0.62, 0.58, 0.62, R(0, 6.28), 0, 0, col)
     }
   // topiary: kule i stożki
   for (let k = 0; k < 4; k++) {
@@ -290,12 +290,37 @@ function generate(opts: GenOptions): GenResult {
   // jasna, słoneczna paleta dla pełnych kwiatów; gatunek losowany niezależnie od koloru
   const tulipPal = ['#e8384a', '#f5874f', '#f7cf3e', '#f29bb4', '#ffffff'].map(hex)
   const daisyPal = ['#fdfaf2', '#f7b3c8', '#c9a6ee', '#fbe7a2', '#ffffff'].map(hex)
+  const palettes: Record<string, Color[]> = {
+    tulip: tulipPal,
+    daisy: daisyPal,
+    bud: [...tulipPal, ...daisyPal],
+    poppy: ['#e2252b', '#f2602c', '#f7a3a8', '#fff3e6'].map(hex),
+    sunflower: ['#f7c623', '#f4a51f', '#f9dd57'].map(hex),
+    allium: ['#9a6fd6', '#b78ee8', '#d9c4f5', '#ffffff'].map(hex),
+    lupine: ['#5b6fe0', '#9a6fd6', '#f29bb4', '#fbe7a2', '#ffffff'].map(hex),
+  }
+  const kinds: [string, number][] = [
+    ['bud', 0.13],
+    ['tulip', 0.19],
+    ['daisy', 0.19],
+    ['poppy', 0.14],
+    ['lupine', 0.14],
+    ['allium', 0.11],
+    ['sunflower', 0.1],
+  ]
   const pickFlower = (pn: number) => {
-    const r = rnd()
-    const kind = r < 0.2 ? 'bud' : r < 0.2 + 0.35 + (pn - 0.5) * 0.3 ? 'tulip' : 'daisy'
-    const pal = kind === 'tulip' ? tulipPal : kind === 'daisy' ? daisyPal : rnd() < 0.5 ? tulipPal : daisyPal
-    const i = Math.min(pal.length - 1, Math.floor(((pn * 1.7 + rnd() * 0.9) % 1) * pal.length))
-    col.copy(pal[i]).multiplyScalar(R(0.92, 1.05))
+    // kępy: w niektórych miejscach przeważa jeden gatunek
+    let r = (rnd() * 0.65 + pn * 0.35) % 1
+    let kind = kinds[0][0]
+    for (const [k, w] of kinds) {
+      if (r < w) {
+        kind = k
+        break
+      }
+      r -= w
+    }
+    const pal = palettes[kind]
+    col.copy(pal[Math.floor(rnd() * pal.length)]).multiplyScalar(R(0.92, 1.05))
     return kind
   }
   const nFlowers = hi ? 30000 : 9000
@@ -333,6 +358,56 @@ function generate(opts: GenOptions): GenResult {
     const s = R(1.25, 1.9)
     B(kind).add(x, heightAt(x, z) - 0.02, z, s, s * R(0.85, 1.2), s, R(0, 6.28), R(-0.14, 0.14), R(-0.14, 0.14), col)
     n++
+  }
+
+  // krzewy: przy bramie, wokół stawu, przy pergoli, na polanie i rozproszone pod drzewami
+  const shrubPal = ['#ffffff', '#f6b8cf', '#a9c4f2', '#f3e2a8', '#e88aa8'].map(hex)
+  const putShrub = (x: number, z: number, flowering: boolean, s = R(0.9, 1.6)) => {
+    if (flowering) col.copy(shrubPal[Math.floor(rnd() * shrubPal.length)])
+    else col.setHSL(R(0.22, 0.3), R(0.42, 0.58), R(0.24, 0.34))
+    B(flowering ? 'shrubFlower' : 'shrub').add(x, heightAt(x, z) - 0.08, z, s, s * R(0.85, 1.15), s, R(0, 6.28), 0, 0, col)
+  }
+  for (let i = 0; i < (hi ? 70 : 34); i++) {
+    const z = R(-70, 25)
+    const d = R(3, 10) * (rnd() < 0.5 ? -1 : 1)
+    putShrub(pathX(z) + d, z, rnd() < 0.45)
+  }
+  for (let i = 0; i < (hi ? 70 : 34); i++) {
+    const a2 = R(0, Math.PI * 2)
+    const e = R(1.12, 1.45)
+    const x = POND.x + Math.cos(a2) * POND.rx * e
+    const z = POND.z + Math.sin(a2) * POND.rz * e
+    if (Math.abs(x - pathX(z)) < 2.8) continue
+    putShrub(x, z, rnd() < 0.5)
+  }
+  for (let z = PERGOLA.z0 + 4; z > PERGOLA.z1 - 4; z -= R(2.5, 4.5))
+    for (const side of [-1, 1]) putShrub(pathX(z) + side * R(3.6, 6), z, rnd() < 0.6, R(0.8, 1.3))
+  for (let i = 0; i < (hi ? 60 : 30); i++) {
+    const a2 = R(0, Math.PI * 2)
+    const rr = R(FINALE.r - 2, FINALE.r + 8)
+    putShrub(FINALE.x + Math.cos(a2) * rr, FINALE.z + Math.sin(a2) * rr, rnd() < 0.5, R(1.1, 2))
+  }
+  for (let i = 0, n = 0; i < 6000 && n < (hi ? 260 : 110); i++) {
+    const z = R(WORLD.zMin + 40, 20)
+    const d = R(9, 40)
+    const x = pathX(z) + d * (rnd() < 0.5 ? -1 : 1)
+    if (dParter(x, z) < PARTERRE.r + 6 || pondE(x, z) < 1.1) continue
+    if (z < MEADOW.z0 && z > MEADOW.z1 && d < 30) continue
+    putShrub(x, z, rnd() < 0.3)
+    n++
+  }
+
+  // otoczaki wzdłuż krawędzi ścieżki
+  const pebPal = ['#c9c3b5', '#a9a294', '#ddd6c6', '#8f8b80', '#bfae95'].map(hex)
+  for (let z = 25; z > WORLD.zMin + 60; z -= hi ? 0.35 : 0.7) {
+    for (const side of [-1, 1]) {
+      if (rnd() < 0.45) continue
+      const x = pathX(z) + side * R(1.3, 2.6)
+      if (dParter(x, z) < PARTERRE.r + 2 || pondE(x, z) < 1.15) continue
+      const sz = R(0.05, 0.16)
+      col.copy(pebPal[Math.floor(rnd() * pebPal.length)])
+      B('pebble').add(x, heightAt(x, z) - sz * 0.15, z, sz, sz, sz, R(0, 6.28), 0, 0, col)
+    }
   }
 
   // pergola z różami i lampionami

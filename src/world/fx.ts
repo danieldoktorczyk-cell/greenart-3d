@@ -122,8 +122,8 @@ export function createGrass(tex: DataTexture, count: number, size: number, shado
   for (let i = 0; i < count; i++) {
     off[i * 2] = (r() - 0.5) * size
     off[i * 2 + 1] = (r() - 0.5) * size
-    rnd[i * 4] = 0.28 + Math.pow(r(), 1.8) * 0.62 // wysokość
-    rnd[i * 4 + 1] = 0.035 + r() * 0.04 // szerokość
+    rnd[i * 4] = 0.15 + Math.pow(r(), 2) * 0.13 // wysokość: krótko przystrzyżony trawnik
+    rnd[i * 4 + 1] = 0.03 + r() * 0.025 // szerokość
     rnd[i * 4 + 2] = r() // obrót
     rnd[i * 4 + 3] = r() // odcień
   }
@@ -169,7 +169,7 @@ export function createGrass(tex: DataTexture, count: number, size: number, shado
         float fade = 1.0 - smoothstep(uSize * 0.28, uSize * 0.5, length(rel));
         // kępy: miejscami trawa wyższa i bujniejsza, miejscami niższa i przesuszona
         float patchN = vn(w * 0.12) * 0.65 + vn(w * 0.45) * 0.35;
-        float hgt = aRand.x * tx.g * fade * (0.6 + patchN * 0.85);
+        float hgt = aRand.x * tx.g * fade * (0.85 + patchN * 0.3);
         float ang = aRand.z * 6.2831853;
         vec3 p = position;
         p.x *= aRand.y;
@@ -178,12 +178,15 @@ export function createGrass(tex: DataTexture, count: number, size: number, shado
         float t = uTime * 1.5;
         float wave = sin(w.x * 0.32 + t) * 0.5 + sin(w.y * 0.23 + t * 1.27) * 0.5 + sin((w.x + w.y) * 1.1 + t * 2.6) * 0.18;
         float bend = p.y * p.y;
-        bp.x += (wave * 0.3 + 0.14) * bend * hgt;
-        bp.z += wave * 0.12 * bend * hgt;
+        // pasy po koszeniu: źdźbła w sąsiednich pasach pochylone w przeciwne strony
+        float stripe = step(0.5, fract(w.x * 0.2));
+        float lean = mix(-0.22, 0.22, stripe);
+        bp.z += lean * bend * hgt;
+        bp.x += (wave * 0.12 + 0.04) * bend * hgt;
         vec4 worldPosition = vec4(vec3(w.x, tx.r - 0.04, w.y) + bp, 1.0);
         vec4 mvPosition = viewMatrix * worldPosition;
         gl_Position = projectionMatrix * mvPosition;
-        vY = p.y; vVar = aRand.w; vWave = wave; vPatch = patchN;
+        vY = p.y; vVar = aRand.w; vWave = wave; vPatch = stripe;
         #include <shadowmap_vertex>
         #include <fog_vertex>
       }`,
@@ -197,8 +200,9 @@ export function createGrass(tex: DataTexture, count: number, size: number, shado
       uniform vec3 uBase; uniform vec3 uTip; uniform vec3 uDry; uniform vec3 uLight; uniform vec3 uSun;
       varying float vY; varying float vVar; varying float vWave; varying float vPatch;
       void main() {
-        vec3 tip = mix(uTip, uDry, smoothstep(0.55, 0.15, vPatch) * 0.55);
-        vec3 col = mix(uBase, tip, smoothstep(0.0, 1.0, vY)) * (0.8 + vVar * 0.38);
+        vec3 col = mix(uBase, uTip, smoothstep(0.0, 1.0, vY)) * (0.88 + vVar * 0.2);
+        // jasne i ciemne pasy trawnika
+        col *= mix(0.88, 1.1, vPatch);
         col *= mix(0.45, 1.0, vY);
         col *= uLight;
         // cień drzew i pergoli kładzie się także na trawie

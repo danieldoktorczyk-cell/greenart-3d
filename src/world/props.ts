@@ -8,6 +8,7 @@ import {
   CylinderGeometry,
   Float32BufferAttribute,
   IcosahedronGeometry,
+  OctahedronGeometry,
   SphereGeometry,
 } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
@@ -104,26 +105,40 @@ export function stone() {
   return paint(g, (x, y, z, ny) => C('#a9a497').multiplyScalar(0.85 + 0.15 * ny + noise(x * 4, z * 4 + y) * 0.05))
 }
 
+/** Lawenda: kępa wąskich, srebrzystych liści i kłosy złożone z drobnych kwiatków */
 export function lavender() {
-  const base = lumpy(new IcosahedronGeometry(0.34, 1), 0.2, 3, 2)
-  base.scale(1, 0.7, 1)
-  base.translate(0, 0.2, 0)
-  paint(base, () => C('#6d7f52'))
-  const spikes: BufferGeometry[] = []
-  for (let i = 0; i < 9; i++) {
-    const s = new ConeGeometry(0.045, 0.42, 4)
-    const a = (i / 9) * Math.PI * 2
-    const r = i === 0 ? 0 : 0.18
-    s.rotateZ(Math.cos(a) * 0.35 * (r ? 1 : 0))
-    s.rotateX(Math.sin(a) * 0.35 * (r ? 1 : 0))
-    s.translate(Math.cos(a) * r, 0.62 + (i % 3) * 0.05, Math.sin(a) * r)
-    paint(s, (_x, y) => C('#7c64b3').lerp(C('#b49ad1'), Math.min(1, Math.max(0, y - 0.5) * 3)))
-    spikes.push(s)
+  const parts: BufferGeometry[] = []
+  let seed = 3
+  const r = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646
+  const leafCol = C('#7f9472')
+  for (let i = 0; i < 16; i++) {
+    const leaf = new ConeGeometry(0.018, 0.34, 3, 1)
+    leaf.translate(0, 0.17, 0)
+    leaf.rotateZ(0.25 + r() * 0.55)
+    leaf.rotateY(r() * Math.PI * 2)
+    parts.push(paint(leaf.toNonIndexed(), () => leafCol.clone().multiplyScalar(0.85 + r() * 0.3)))
   }
-  const stems = new CylinderGeometry(0.012, 0.012, 0.4, 3)
-  stems.translate(0, 0.35, 0)
-  paint(stems, () => C('#6d7f52'))
-  return mergeGeometries([base, ...spikes.map((s) => s.toNonIndexed()), stems.toNonIndexed()].map((g) => (g.index ? g.toNonIndexed() : g)))
+  for (let i = 0; i < 13; i++) {
+    const a = r() * Math.PI * 2
+    const tilt = 0.1 + r() * 0.32
+    const h = 0.5 + r() * 0.2
+    const stem = new CylinderGeometry(0.006, 0.008, h, 3)
+    stem.translate(0, h / 2, 0)
+    const spike: BufferGeometry[] = [paint(stem.toNonIndexed(), () => C('#7c8c5e'))]
+    // kłos: kilka okółków drobnych kwiatków, coraz mniejszych ku górze
+    for (let k = 0; k < 6; k++) {
+      const f = new OctahedronGeometry(0.03 * (1 - k * 0.1), 0)
+      f.scale(1, 1.5, 1)
+      f.translate(0, h - 0.02 + k * 0.045, 0)
+      const shade = 0.75 + k * 0.06
+      spike.push(paint(f.toNonIndexed(), () => C('#7b5fc0').lerp(C('#b9a0e3'), k / 6).multiplyScalar(shade + r() * 0.1)))
+    }
+    const g = mergeGeometries(spike.map((s) => { s.deleteAttribute('uv'); return s }))
+    g.rotateZ(tilt)
+    g.rotateY(a)
+    parts.push(g)
+  }
+  return mergeGeometries(parts.map((s) => { if (s.attributes.uv) s.deleteAttribute('uv'); return s }))
 }
 
 export function boxwood() {
