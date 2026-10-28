@@ -21,7 +21,9 @@ Cały świat powstaje w kodzie: teren, rośliny, niebo i woda. Strona nie używa
 - Teren, drzewa, lawenda, bukszpan, kwiaty i róże są generowane w osobnym wątku (Web Worker), więc strona nie przycina się podczas ładowania.
 - Trawa to łatka ok. 150 tys. źdźbeł (50 tys. na telefonie), która „wędruje” razem z kamerą i kołysze się na wietrze w shaderze.
 - Pozycja przewijania wyznacza miejsce na ścieżce. Każda sekcja tekstu ma atrybut `data-z`, czyli punkt drogi, w którym się pojawia.
-- Na telefonach i słabszych komputerach automatycznie włącza się lżejsza wersja (mniej trawy i drzew, niższa rozdzielczość).
+- Na mocnych komputerach: miękkie cienie (drzewa, pergola, topiary — także na trawie), poświata jasnych miejsc (słońce, lampiony, wieniec) z wygładzaniem krawędzi i ok. 260 tys. źdźbeł trawy rosnącej w kępach.
+- Wszędzie: motyle, ważki nad stawem i opadające płatki (`src/world/critters.ts`).
+- Na telefonach i słabszych komputerach automatycznie włącza się lżejsza wersja (bez cieni i poświaty, mniej trawy i drzew, niższa rozdzielczość).
 - Przy ustawieniu „ogranicz ruch” (`prefers-reduced-motion`) kamera nie leci, tylko przeskakuje między etapami przez krótkie wyciemnienie. Ten tryb można podejrzeć, dopisując do adresu `?reduced-motion`.
 - Bez WebGL strona wyświetla spokojne zielone tło, a cała treść i formularz nadal działają.
 

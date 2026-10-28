@@ -12,16 +12,26 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshLambertMaterial,
+  PCFSoftShadowMap,
   PMREMGenerator,
   PerspectiveCamera,
+  Vector2,
   SRGBColorSpace,
   Scene,
   Vector3,
+  WebGLRenderTarget,
   WebGLRenderer,
+  HalfFloatType,
   type BufferGeometry as BG,
   type Material,
 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
+import { butterflies, dragonflies, petals } from './critters'
 import { atmosphereAt } from './atmosphere'
 import { createGlows, createGrass, createMotes, createSky, createWater, heightTexture, shared } from './fx'
 import type { GenResult } from './gen.worker'
@@ -60,6 +70,11 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
   renderer.outputColorSpace = SRGBColorSpace
   renderer.toneMapping = ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.05
+  // cienie tylko na mocniejszym sprzęcie
+  if (hi) {
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = PCFSoftShadowMap
+  }
 
   const scene = new Scene()
   scene.fog = new FogExp2('#dfe4c2', 0.01)
@@ -67,6 +82,18 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
 
   const hemi = new HemisphereLight('#fff', '#444', 1)
   const sun = new DirectionalLight('#fff', 2)
+  if (hi) {
+    // „pudełko” cieni podąża za kamerą
+    sun.castShadow = true
+    sun.shadow.mapSize.set(2048, 2048)
+    const sc = sun.shadow.camera
+    sc.left = sc.bottom = -48
+    sc.right = sc.top = 48
+    sc.near = 1
+    sc.far = 320
+    sun.shadow.bias = -0.0006
+    sun.shadow.normalBias = 0.05
+  }
   scene.add(hemi, sun, sun.target)
 
   const sky = createSky()
@@ -80,19 +107,21 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
   tg.setAttribute('color', new BufferAttribute(data.terrain.col, 3))
   tg.setIndex(new BufferAttribute(data.terrain.idx, 1))
   tg.computeBoundingSphere()
-  scene.add(new Mesh(tg, new MeshLambertMaterial({ vertexColors: true })))
+  const terrain = new Mesh(tg, new MeshLambertMaterial({ vertexColors: true }))
+  terrain.receiveShadow = true
+  scene.add(terrain)
   onProgress(80)
   await pause()
 
   // ——— Trawa ———
   const tex = heightTexture(data.tex.data, data.tex.w, data.tex.h)
-  const grass = createGrass(tex, hi ? 150000 : 50000, hi ? 60 : 42)
+  const grass = createGrass(tex, hi ? 260000 : 50000, hi ? 64 : 42, hi)
   scene.add(grass.mesh)
   await pause()
 
   // ——— Obiekty (instancje) ———
   const lambert = (o: ConstructorParameters<typeof MeshLambertMaterial>[0] = {}) => new MeshLambertMaterial({ vertexColors: true, ...o })
-  const add = (name: string, geo: BG, mat: Material, colors = true) => {
+  const add = (name: string, geo: BG, mat: Material, colors = true, cast = true, receive = false) => {
     const d = data.inst[name]
     if (!d) return null
     const n = d.m.length / 16
@@ -100,6 +129,8 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
     mesh.instanceMatrix = new InstancedBufferAttribute(d.m, 16)
     if (colors && d.c) mesh.instanceColor = new InstancedBufferAttribute(d.c, 3)
     mesh.computeBoundingSphere()
+    mesh.castShadow = hi && cast
+    mesh.receiveShadow = hi && receive
     scene.add(mesh)
     return mesh
   }
@@ -116,24 +147,30 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
   await pause()
   const rockGeo = props.rock()
   add('rock', rockGeo, lambert())
-  add('stone', props.stone(), lambert())
-  add('lily', props.lilyPad(), new MeshLambertMaterial({ color: '#ffffff' }))
-  add('lotus', props.flowerHead(), new MeshLambertMaterial({ color: '#ffffff', emissive: '#3a1f24' }))
+  add('stone', props.stone(), lambert(), true, false, true)
+  add('lily', props.lilyPad(), new MeshLambertMaterial({ color: '#ffffff' }), true, false, true)
+  add('lotus', props.flowerHead(), new MeshLambertMaterial({ color: '#ffffff', emissive: '#3a1f24' }), true, false)
   await pause()
-  add('lavender', props.lavender(), windy(lambert(), 0.12))
-  add('box', props.boxwood(), lambert())
+  add('lavender', props.lavender(), windy(lambert(), 0.12), true, true, true)
+  add('box', props.boxwood(), lambert(), true, true, true)
   add('cone', props.topiaryCone(), lambert())
   await pause()
-  add('flower', props.flowerHead(), windy(new MeshLambertMaterial({ color: '#ffffff', emissive: '#2a2018' }), 0.35, true))
+  add('flower', props.flowerHead(), windy(new MeshLambertMaterial({ color: '#ffffff', emissive: '#2a2018' }), 0.35, true), true, false, true)
   add('rose', props.blossom(), windy(new MeshLambertMaterial({ color: '#ffffff', emissive: '#2a1414' }), 0.25, true))
   add('leaf', props.flowerHead(), new MeshLambertMaterial({ color: '#ffffff' }))
-  add('wood', props.wood(), new MeshLambertMaterial({ color: '#7d5c40' }), false)
-  add('lantern', props.lantern(), new MeshBasicMaterial({ color: '#ffd9a0' }), false)
+  add('wood', props.wood(), new MeshLambertMaterial({ color: '#7d5c40' }), false, true, true)
+  // lampion świeci mocniej niż biel — dzięki temu łapie poświatę (bloom)
+  const lanternMat = new MeshBasicMaterial()
+  lanternMat.color.setRGB(4, 2.6, 1.3)
+  const lanternGeo = props.lantern()
+  lanternGeo.scale(0.55, 0.55, 0.55)
+  add('lantern', lanternGeo, lanternMat, false, false)
 
   onProgress(86)
   await pause()
   // fontanna w parterze
   const fountain = new Mesh(props.fountain(), lambert())
+  fountain.castShadow = fountain.receiveShadow = hi
   fountain.position.set(PARTERRE.x, pathY(PARTERRE.z), PARTERRE.z)
   scene.add(fountain)
 
@@ -153,6 +190,13 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
   motes.mat.uniforms.uPx.value = dpr
   glows.mat.uniforms.uPx.value = dpr
 
+  // motyle, ważki nad stawem i opadające płatki
+  const flies = butterflies(hi ? 90 : 36)
+  const drag = dragonflies(hi ? 14 : 8, new Vector3(POND.x, WATER_LEVEL, POND.z), POND.rx * 0.8)
+  const pet = petals(hi ? 520 : 180)
+  scene.add(flies.mesh, drag.mesh, pet.mesh)
+  const critters = [flies.mat, drag.mat, pet.mat]
+
   await pause()
   // ——— Logo (na początku i na końcu drogi) ———
   const pm = new PMREMGenerator(renderer)
@@ -163,19 +207,51 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
   const logoB = createLogo(env)
   logoB.group.position.set(FINALE.x, pathY(FINALE.z) + 11, FINALE.z + 6)
   logoB.group.scale.setScalar(8.5)
+  for (const l of [logoA, logoB]) l.group.traverse((o) => (o.castShadow = hi))
   scene.add(logoA.group, logoB.group)
   pm.dispose()
   onProgress(90)
   await pause()
 
+  // ——— Efekty kinowe (tylko mocny sprzęt): poświata jasnych miejsc + lekka aberracja na brzegach ———
+  let composer: EffectComposer | null = null
+  let bloom: UnrealBloomPass | null = null
+  if (hi) {
+    // bufor z wygładzaniem krawędzi (MSAA), żeby efekty nie dawały „schodków”
+    composer = new EffectComposer(renderer, new WebGLRenderTarget(innerWidth * dpr, innerHeight * dpr, { type: HalfFloatType, samples: 4 }))
+    composer.setPixelRatio(dpr)
+    composer.addPass(new RenderPass(scene, camera))
+    bloom = new UnrealBloomPass(new Vector2(512, 512), 0.3, 0.5, 2.4)
+    composer.addPass(bloom)
+    composer.addPass(new OutputPass())
+    composer.addPass(
+      new ShaderPass({
+        uniforms: { tDiffuse: { value: null }, uAmount: { value: 0.0025 } },
+        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: /* glsl */ `
+          uniform sampler2D tDiffuse; uniform float uAmount; varying vec2 vUv;
+          void main(){
+            vec2 d = vUv - 0.5;
+            float k = dot(d, d) * 4.0;
+            vec2 off = d * uAmount * k;
+            vec3 c = vec3(texture2D(tDiffuse, vUv + off).r, texture2D(tDiffuse, vUv).g, texture2D(tDiffuse, vUv - off).b);
+            gl_FragColor = vec4(c, 1.0);
+          }`,
+      }),
+    )
+  }
+  const draw = () => (composer ? composer.render() : renderer.render(scene, camera))
+
   // ——— Kamera ———
   const camPos = new Vector3()
   const look = new Vector3()
+  const fwd = new Vector3()
   const pointer = { x: 0, y: 0, sx: 0, sy: 0 }
   let lastZ = Number.NaN
 
   function setSize(w: number, h: number) {
     renderer.setSize(w, h, false)
+    composer?.setSize(w, h)
     camera.aspect = w / h
     // na pionowym ekranie szerszy kąt, żeby zmieścić krajobraz
     camera.fov = w / h < 0.8 ? 72 : w / h < 1.2 ? 62 : 52
@@ -221,13 +297,23 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
       motes.mat.uniforms.uGlow.value = 0.35 + a.glow * 0.9
       motes.mat.uniforms.uColor.value.set(a.glow > 0.8 ? '#ffd08a' : '#fff6da')
       glows.mat.uniforms.uGlow.value = 0.4 + a.glow
+      for (const m of critters) m.uniforms.uLight.value.copy(grass.mat.uniforms.uLight.value).multiplyScalar(1.15)
+      // w dzień subtelnie, o zachodzie słońca mocniej
+      if (bloom) bloom.strength = 0.12 + a.glow * 0.5
       lastZ = z
     }
-    sun.position.copy(camPos).addScaledVector(atmosphereAt(z).sunDir, 100)
-    sun.target.position.copy(camPos)
+    // cienie liczone w pudełku przed kamerą
+    fwd.copy(look).sub(camPos).setY(0).normalize()
+    sun.target.position.copy(camPos).addScaledVector(fwd, 26)
+    sun.position.copy(sun.target.position).addScaledVector(atmosphereAt(z).sunDir, 150)
     sky.mesh.position.copy(camPos)
     grass.mat.uniforms.uCam.value.set(camPos.x, camPos.z)
     motes.mat.uniforms.uCam.value.copy(camPos)
+    const ground = pathY(z)
+    for (const m of critters) {
+      m.uniforms.uCam.value.copy(camPos)
+      m.uniforms.uGround.value = ground
+    }
     const t = shared.uTime.value
     for (const [l, base] of [
       [logoA, 4],
@@ -237,7 +323,7 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
       l.group.rotation.x = Math.sin(t * 0.25) * 0.06
       l.group.position.y = (base === 4 ? pathY(4) + 3.4 : pathY(FINALE.z) + 11) + Math.sin(t * 0.8) * 0.25
     }
-    renderer.render(scene, camera)
+    draw()
   }
 
   return {
@@ -249,7 +335,7 @@ export async function createWorld(canvas: HTMLCanvasElement, data: GenResult, qu
     async warmup(z: number) {
       placeCamera(z)
       await renderer.compileAsync(scene, camera).catch(() => {})
-      renderer.render(scene, camera)
+      draw()
       onProgress(100)
     },
   }

@@ -91,7 +91,7 @@ export function heightTexture(data: Uint16Array, w: number, h: number) {
 }
 
 // ——— Trawa: stała łatka źdźbeł, która „zawija się” wokół kamery ———
-export function createGrass(tex: DataTexture, count: number, size: number) {
+export function createGrass(tex: DataTexture, count: number, size: number, shadows = false) {
   const g = new InstancedBufferGeometry()
   // źdźbło: 4 segmenty zwężające się ku górze
   const seg = 4
@@ -130,9 +130,11 @@ export function createGrass(tex: DataTexture, count: number, size: number) {
 
   const mat = new ShaderMaterial({
     fog: true,
+    lights: true,
     side: DoubleSide,
     uniforms: UniformsUtils.merge([
       fogPars,
+      UniformsLib.lights,
       {
         uCam: { value: new Vector2() },
         uSize: { value: size },
@@ -142,21 +144,29 @@ export function createGrass(tex: DataTexture, count: number, size: number) {
         uTime: { value: 0 },
         uBase: { value: new Color('#2b4720') },
         uTip: { value: new Color('#a9bd58') },
+        uDry: { value: new Color('#c9b766') },
         uLight: { value: new Color(1, 1, 1) },
         uSun: { value: new Color(1, 1, 1) },
       },
     ]),
     vertexShader: /* glsl */ `
+      #include <common>
       #include <fog_pars_vertex>
+      #include <shadowmap_pars_vertex>
       attribute vec2 aOffset; attribute vec4 aRand;
       uniform vec2 uCam; uniform float uSize; uniform sampler2D uHeight; uniform vec2 uWMin; uniform vec2 uWSize; uniform float uTime;
-      varying float vY; varying float vVar; varying float vWave;
+      varying float vY; varying float vVar; varying float vWave; varying float vPatch;
+      float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(h21(i), h21(i + vec2(1, 0)), f.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), f.x), f.y); }
       void main() {
         vec2 rel = mod(aOffset - uCam + uSize * 0.5, uSize) - uSize * 0.5;
         vec2 w = uCam + rel;
         vec4 tx = texture2D(uHeight, (w - uWMin) / uWSize);
         float fade = 1.0 - smoothstep(uSize * 0.28, uSize * 0.5, length(rel));
-        float hgt = aRand.x * tx.g * fade;
+        // kępy: miejscami trawa wyższa i bujniejsza, miejscami niższa i przesuszona
+        float patchN = vn(w * 0.12) * 0.65 + vn(w * 0.45) * 0.35;
+        float hgt = aRand.x * tx.g * fade * (0.6 + patchN * 0.85);
         float ang = aRand.z * 6.2831853;
         vec3 p = position;
         p.x *= aRand.y;
@@ -167,20 +177,31 @@ export function createGrass(tex: DataTexture, count: number, size: number) {
         float bend = p.y * p.y;
         bp.x += (wave * 0.3 + 0.14) * bend * hgt;
         bp.z += wave * 0.12 * bend * hgt;
-        vec4 mvPosition = viewMatrix * vec4(vec3(w.x, tx.r - 0.04, w.y) + bp, 1.0);
+        vec4 worldPosition = vec4(vec3(w.x, tx.r - 0.04, w.y) + bp, 1.0);
+        vec4 mvPosition = viewMatrix * worldPosition;
         gl_Position = projectionMatrix * mvPosition;
-        vY = p.y; vVar = aRand.w; vWave = wave;
+        vY = p.y; vVar = aRand.w; vWave = wave; vPatch = patchN;
+        #include <shadowmap_vertex>
         #include <fog_vertex>
       }`,
     fragmentShader: /* glsl */ `
+      uniform bool receiveShadow;
+      #include <common>
+      #include <packing>
       #include <fog_pars_fragment>
-      uniform vec3 uBase; uniform vec3 uTip; uniform vec3 uLight; uniform vec3 uSun;
-      varying float vY; varying float vVar; varying float vWave;
+      #include <shadowmap_pars_fragment>
+      #include <shadowmask_pars_fragment>
+      uniform vec3 uBase; uniform vec3 uTip; uniform vec3 uDry; uniform vec3 uLight; uniform vec3 uSun;
+      varying float vY; varying float vVar; varying float vWave; varying float vPatch;
       void main() {
-        vec3 col = mix(uBase, uTip, smoothstep(0.0, 1.0, vY)) * (0.8 + vVar * 0.38);
+        vec3 tip = mix(uTip, uDry, smoothstep(0.55, 0.15, vPatch) * 0.55);
+        vec3 col = mix(uBase, tip, smoothstep(0.0, 1.0, vY)) * (0.8 + vVar * 0.38);
         col *= mix(0.45, 1.0, vY);
         col *= uLight;
-        col += uSun * 0.07 * vY * (vWave * 0.5 + 0.5);
+        // cień drzew i pergoli kładzie się także na trawie
+        float sh = getShadowMask();
+        col *= mix(0.58, 1.0, sh);
+        col += uSun * 0.08 * vY * (vWave * 0.5 + 0.5) * sh;
         gl_FragColor = vec4(col, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -191,6 +212,7 @@ export function createGrass(tex: DataTexture, count: number, size: number) {
   mat.uniforms.uTime = shared.uTime
   const mesh = new Mesh(g, mat)
   mesh.frustumCulled = false
+  mesh.receiveShadow = shadows
   return { mesh, mat }
 }
 
